@@ -6,3 +6,6 @@ backup-before-*/
 *.log
 .env
 .env.*
+.release-private/
+release-local.json
+*private*.pem

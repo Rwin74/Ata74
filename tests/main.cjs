@@ -12,9 +12,13 @@ async function main(){
  const context={require(id){if(id==='electron')return electron;if(id==='electron-updater')return {autoUpdater:{}};if(id==='child_process')return cp;if(id==='./updater')return {setupUpdates:()=>({check(){}})};if(id==='./system-tools')return {...tools,runSystem:system};if(id==='./network-tools')return {...network,httpsProbe:async()=>({ok:false,error:'blocked'})};if(id.startsWith('./'))return require(path.join(root,id));return require(id)},__dirname:root,process:{resourcesPath:root},console,AbortController,setTimeout(fn,ms){if(ms===1000){queueMicrotask(fn);return 0;}return setTimeout(fn,ms)},clearTimeout};
  vm.runInNewContext('(function(){'+fs.readFileSync(path.join(root,'main.js'),'utf8')+'\n})()',context);await new Promise(setImmediate);
  const event={sender:win.webContents,senderFrame:win.webContents.mainFrame};
+ assert.equal((await handlers['shutdown-schedule'](event,0)).success,false);
+ assert.equal((await handlers['shutdown-schedule'](event,60)).success,false);
+ assert.equal((await handlers['shutdown-state'](event)).data.status,'idle');
  assert.equal((await handlers.tool({sender:{},senderFrame:{}},'flush',{})).success,false);
  assert.equal((await handlers.tool(event,'dns-apply',{id:'adapter',provider:'cloudflare'})).success,false);assert.equal(writes,0,'Cancelled dialog must not mutate');
- confirmResponse=1;assert.equal((await handlers.tool(event,'dns-apply',{id:'adapter',provider:'evil'})).success,false);assert.equal(writes,0);
+ confirmResponse=1;assert((await handlers['shutdown-schedule'](event,60)).success);assert.equal((await handlers['shutdown-state'](event)).data.status,'scheduled');assert.equal((await handlers['shutdown-cancel'](event)).data.status,'cancelled');
+ assert.equal((await handlers.tool(event,'dns-apply',{id:'adapter',provider:'evil'})).success,false);assert.equal(writes,0);
  assert((await handlers.tool(event,'dns-apply',{id:'adapter',provider:'cloudflare'})).success);assert.equal(dns.manual,true);assert.deepEqual(dns.servers,['1.1.1.1','1.0.0.1']);
  assert((await handlers.tool(event,'dns-restore',{id:'adapter'})).success);assert.equal(dns.manual,false);
  assert((await handlers.tool(event,'power-apply',{id:'selected'})).success);assert.equal(power.active,'selected');assert((await handlers.tool(event,'power-restore')).success);assert.equal(power.active,'original');

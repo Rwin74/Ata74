@@ -19,14 +19,13 @@ jobs:
       - name: Check Windows script syntax
         shell: pwsh
         run: ./scripts/check-powershell.ps1
-      - name: Configure this repository as the update source
-        run: npm run configure:github -- $env:GITHUB_REPOSITORY
       - name: Check version matches release tag
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
           if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag and package version must match' }
-      - name: Build and publish installer plus update metadata
+      - name: Build, sign and publish
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ATA74_SIGNING_PRIVATE_KEY: ${{ secrets.ATA74_SIGNING_PRIVATE_KEY }}

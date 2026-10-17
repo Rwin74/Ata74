@@ -1,37 +1,37 @@
-# Ata74 1.4.0
+# Ata74 1.5.0
 
-Windows için GoodbyeDPI istemcisi ve ağ tanılama araçları.
+Windows için GoodbyeDPI istemcisi, ağ araçları, depolama analizi ve kapatma zamanlayıcısı.
 
-**VPN değildir:** IP adresini değiştirmez, şifreli VPN tüneli oluşturmaz. Her filtreyi aşma veya ping/FPS artışı garantisi yoktur. Özel yurt ağındaki Discord erişimi ve ses bağlantısı ayrıca denenmelidir.
+[Son sürümü indir](https://github.com/Rwin74/Ata74/releases/latest). Kurulum: `Ata74-Setup` dosyası. Önceki taşınabilir uygulamayı tepsiden kapatın. Windows yönetici izni ister. Ata74 VPN değildir; IP değiştirmez ve ping/FPS artışı garanti etmez.
 
-[Son sürümü indir](https://github.com/Rwin74/Ata74/releases/latest). Kurulum için `Ata74-Setup` dosyasını kullanın. Önceki taşınabilir uygulamayı tepsiden tamamen kapatın. Windows yönetici izni ister; kod imzalama sertifikası eklenmemiştir.
+## Güncelleme güvenliği
 
-## Gerçek ölçümler
+1.5.0'dan itibaren yeni sürümün küçük yayın kaydı, uygulamaya gömülü Ed25519 açık anahtarla doğrulanır. Ardından sürüm, dosya adı, platform, boyut ve SHA512 özeti GitHub güncelleme listesiyle karşılaştırılır. İndirme bitince ve kurulumdan hemen önce EXE yeniden doğrulanır. İmzasız/uyuşmayan paket kurulmaz. Kullanıcı indirmeyi iptal edebilir; indirme ve kurulum ayrı onay adımlarıdır.
 
-- Kullanıcının seçtiği tek hedefe 12 ICMP denemesi: ortalama/en az/en çok RTT, yanıtsız oranı ve ardışık başarılı örneklerde RTT değişimi.
-- Önceki aynı hedef ölçümüyle karşılaştırma. Ağ ve yük değişirse sonuçlar doğrudan karşılaştırılmamalıdır.
-- Discord web/API ve genel HTTPS adresinin ayrı kontrolü. Ses/UDP ve WebSocket doğrulanmaz.
-- Dört DNS sağlayıcısında üç alan adı, ikişer gerçek A sorgusu. Medyan ve başarı sayısı gösterilir; eksik sonuç veren sağlayıcı önerilmez. Bu test oyun pingini ölçmez ve ayar değiştirmez.
+**İlk geçiş:** 1.4.0 ve öncesi yeni imzayı doğrulamaz. 1.5.0'a geçiş mevcut GitHub/HTTPS ve SHA512 mekanizmasıyla olur. İmza zorunluluğu 1.5.0 kurulduktan sonraki güncellemelerde başlar. Bu, Windows Authenticode sertifikası değildir ve SmartScreen uyarısını kaldırmaz. GitHub veya ağ erişimi engellenirse güncelleme kontrolü başarısız olabilir; mevcut uygulama kullanılmaya devam eder.
 
-## Kontrollü ayarlar
+İmzalama anahtarı yerel `.release-private/release-signing-key.pem` dosyasında tutulur; Git tarafından yok sayılır ve uygulamaya eklenmez. Bu klasörü kaybetmeyin, güvenli bir yedeğini koruyun. **Anahtarı kaynak ZIP'ine, GitHub deposuna veya Release dosyalarına koymayın.** Anahtar kaybolursa mevcut istemcilere farklı anahtarla normal güncelleme yapılamaz. Başka bilgisayarda yayın için aynı özel anahtar gerekir. Anahtar değişimi ayrı bir geçiş sürümü gerektirir.
 
-- IPv4 DNS yalnızca seçilen bağlı fiziksel ağ kartında ve kullanıcı onayıyla değiştirilir. IPv6, IP ve ağ geçidi korunur.
-- DNS'in önceki otomatik/elle atama türü ve adresleri yazmadan önce kaydedilir. Sonuç Windows'tan yeniden okunarak doğrulanır.
-- Güç planı yalnızca cihazda kurulu planlar arasından seçilir. Servis kapatılmaz, dosya silinmez. Önceki özel güç planı dahil tam plan kimliği kaydedilir.
-- Başarısız değişiklikte önceki ayar geri yüklenmeye çalışılır. Geri alma başarısızsa yedek korunur. Başka bir uygulamanın sonradan değiştirdiği ayarın üzerine yazılmaz.
-- DNS temizliği, salt okunur bellek/servis/TCP kayıtları ve Interrupt Moderation görünümü, yerel JSON tanı raporu.
+## Depolama analizi
 
-Yedekler uygulamanın kullanıcı veri klasöründeki `settings-backup-v1.json` dosyasında tutulur. Dosyayı silmeyin; bozuksa uygulama tahmini ayarla devam etmez.
+Seçilen normal klasör veya sürücüde en büyük dosyalar, üst klasör toplamları ve dosya türleri listelenir. Dosya içeriği okunmaz; hiçbir şey silinmez. Sembolik bağlantı/junction klasörleri takip edilmez. Erişim hatası ve 300.000 giriş / 90 saniye sınırı varsa sonuç kısmi olarak etiketlenir. Taranan dosyaların görünen mantıksal boyutu diskte tahsis edilen fiziksel alanla aynı değildir. Sıkıştırılmış/sparse dosyalar farklı yer kaplayabilir; görülen sabit bağlantı tekrarları bir kez sayılır. Tarama ayrı iş parçacığında çalışır ve durdurulabilir.
 
-## Kaldırılan özellikler ve geçiş
+## Kapatma zamanlayıcısı
 
-RAM boşaltma, zorla 0,5 ms zamanlayıcı, toplu MSI/TCP kayıt değişiklikleri, kesme ayarını zorla değiştirme ve telemetri kapatma kaldırıldı. Evrensel performans kazancı sağlamazlar. Dosya sıkıştırma, masaüstü dosyalarını taşıma ve bilgisayarı kapatma araçları da ağ istemcisinin kapsamından çıkarıldı.
+1–1440 dakika arasında, ayrı kullanıcı onayıyla planlanır. Geri sayım ve iptal düğmesi vardır. Uygulama tepsideyken çalışır; tam çıkış, uyku veya yeniden başlatma iptal eder. Süre dolunca `/s /t 0` ile normal kapatma istenir; `/f` kullanılmaz. Kaydedilmemiş işler kapatmayı engelleyebilir. Zamanlayıcı etkinken güncelleme kurulumu başlatılmaz; önce iptal edilmelidir.
 
-**1.3.0 ve öncesi önceki ayarları yedeklemedi.** Bu nedenle eski değişiklikler otomatik geri alınmaz. Sistem durumu ekranı mevcut değerleri gösterir; kaynağı bilinmeyen değerler standart olduğu varsayılarak silinmez. İlk çalıştırmada eski kayıt veya servisler değiştirilmez.
+## Ağ ve sistem araçları
+
+- Tek hedefe 12 ICMP denemesi: ortalama/en az/en çok RTT, yanıtsız oranı ve ardışık başarılı örneklerde RTT değişimi. Sonuç oyun/Discord ses gecikmesi değildir.
+- Dört DNS sağlayıcısında üç alan adı, ikişer gerçek sorgu. Medyan ve başarı sayısı gösterilir; ölçüm kendiliğinden ayar değiştirmez.
+- Seçili fiziksel kartın IPv4 DNS atama türü ve adresleri değişiklikten önce kaydedilir. Güç planı kimliği de kaydedilir. Sonuç tekrar okunur; geri almada dışarıdan değiştirilmiş ayarın üzerine yazılmaz.
+- Salt okunur bellek/servis/TCP kayıtları ve ağ kartı kesme ayarı; yerel JSON tanı raporu.
+
+Eski sürümlerin RAM temizleme, 0,5 ms kilidi, toplu MSI/TCP ve servis müdahaleleri kaldırılmıştır. 1.3.0 ve öncesi ilk ayarları kaydetmediğinden eski değişiklikler tahmini değerlerle geri alınmaz. Dosya sıkıştırma ve masaüstü dosyalarını toplu taşıma geri getirilmemiştir.
 
 ## Geliştirme ve yayın
 
-Windows, Node.js 22 veya üstü:
+Windows, Node.js 22+:
 
 ```powershell
 npm ci
@@ -40,12 +40,14 @@ npm test
 npm run build
 ```
 
-Güncelleme adresi: `Rwin74/Ata74`. Yeni sürüm için `package.json` ve kilit dosyasındaki numarayı artırıp eşleşen `v1.4.1` etiketini gönderin. GitHub Actions testleri çalıştırır, kurulum ve güncelleme dosyalarını yayınlar. Gerektiğinde Actions ekranından aynı iş akışı elle de başlatılabilir. Ayrıntılar: [Yayın rehberi](README-GUNCELLEME.md).
+`npm run build` kurulum paketini üretir ve mevcut özel anahtarla `ata74-update.json` / `ata74-update.sig` dosyalarını imzalar. Anahtar yoksa yayın imzası üretilemez. Uygulama geliştirmek ve test çalıştırmak için özel anahtar gerekmez. Mevcut açık anahtarı rastgele yenilemeyin.
 
-## Doğrulama kapsamı
+Sürümü artırın, kaynakları commit/push yapın, eşleşen sürüm etiketini gönderin; sonra `npm run release` kullanın. Komut temiz ve GitHub main ile eşleşen kaynak ister, paketi kaynakla karşılaştırır, beş yayın dosyasını önce taslağa yükler, ardından herkese açar. Yayınlanmış sürümün dosyalarını değiştirmez; yeni sürüm numarası gerekir. Yerelde önceden derlenmiş aynı kaynak için `npm run release -- --skip-build` kullanılabilir.
 
-Birim ve IPC testleri: RTT hesaplama, hedef doğrulama, DNS sorgu seçimi, yedeklemeden önce yazmama, birebir geri yükleme, dış değişiklik çatışması, işlem hatası/geri alma hatası, iptal edilen onay ve güncelleme durum akışı. Arayüz testleri test yanıtlarıyla yapılır.
+GitHub hesabında Actions kısıtlaması vardır. Çözüldüğünde CI için `ATA74_SIGNING_PRIVATE_KEY` adlı GitHub Actions secret'ına aynı özel anahtarın ayrıca eklenmesi gerekir. Bu görev sırasında özel anahtar GitHub'a aktarılmamıştır. [Yayın rehberi](README-GUNCELLEME.md).
 
-Windows'ta salt okunur ağ kartı, güç planı, bellek/servis okuma; gerçek ICMP, DNS ve HTTPS ölçümleri denenmiştir. Kullanıcının gerçek DNS/güç ayarları test amacıyla değiştirilmemiştir. Fiziksel aygıtta değiştir/geri al ve kurulu iki sürüm arasında güncellemenin tamamı henüz uçtan uca doğrulanmamıştır.
+## Doğrulama sınırları
 
-GoodbyeDPI 0.2.2 ve WinDivert lisansları `core/licenses` içindedir. Kaynak: https://github.com/ValdikSS/GoodbyeDPI
+Gerçek Ed25519 imza/hash testleri; yanlış anahtar, değiştirilmiş paket, sürüm/listenin uyuşmaması, indirme iptali ve kurulum öncesi yeniden doğrulama testleri vardır. Depolama testleri geçici dosyalarda gerçek tarama, junction atlama, kısmi sonuç ve iptal içerir. Zamanlayıcı testlerinde gerçek kapatma komutu çalıştırılmamıştır. Önceki Windows salt okunur ve arayüz kontrolleri korunur. İki gerçek kurulu sürüm arasında uçtan uca güncelleme ve yurt ağındaki ses/UDP bağlantısı ayrıca doğrulanmalıdır.
+
+GoodbyeDPI 0.2.2 / WinDivert lisansları: `core/licenses`. Kaynak: https://github.com/ValdikSS/GoodbyeDPI

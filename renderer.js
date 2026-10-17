@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
  }
  try{text('greeting',await window.api.getUsername());}catch{text('greeting','Yerel kullanıcı');}
  $('close-btn').onclick=()=>window.api.closeApp();$('minimize-btn').onclick=()=>window.api.minimizeWindow();$('maximize-btn').onclick=()=>window.api.maximizeWindow();
- const pages={'bypass-view':['Bağlantı','Bağlantın, kontrolünde.','Ağına uygun profili seç. Gerisini Ata74 denesin.'],'boost-view':['Ağ ölçümü','Önce ölç, sonra karar ver.','Hedefe göre gecikme, paket kaybı, HTTPS ve DNS yanıtları.'],'tools-view':['Araçlar','Kontrollü değişiklikler.','Seçili kart ve güç planı. Önce kaydet, uygula, doğrula.'],'pro-view':['Sistem durumu','Bilgisayarında neler oluyor?','Mevcut ayarları oku. Performans kazancı varsayma.']};
+ const pages={'bypass-view':['Bağlantı','Bağlantın, kontrolünde.','Ağına uygun profili seç. Gerisini Ata74 denesin.'],'boost-view':['Ağ ölçümü','Önce ölç, sonra karar ver.','Hedefe göre gecikme, paket kaybı, HTTPS ve DNS yanıtları.'],'tools-view':['PC araçları','Bilgisayarın için araçlar.','Depolama analizi, kapatma zamanlayıcısı ve kontrollü sistem ayarları.'],'pro-view':['Sistem durumu','Bilgisayarında neler oluyor?','Mevcut ayarları oku. Performans kazancı varsayma.']};
  document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view-panel').forEach(p=>p.style.display=p.id===b.dataset.target?'block':'none');const p=pages[b.dataset.target];text('page-label',p[0]);text('page-title',p[1]);text('page-description',p[2]);document.querySelector('.content').scrollTop=0;});
  $('network-mode').onchange=e=>text('profile-caption',e.target.value==='yurt_auto'?'5 yöntem, sırayla':'Tek profil');
  window.api.onLauncherProgress(value=>text('status',value));window.api.onLauncherState(value=>connectionState(value.state,value.message));
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
  $('stop-btn').onclick=async()=>{const b=$('stop-btn');b.disabled=true;try{const result=await window.api.stopLauncher();if(!result.success)throw Error(result.error);connectionState('idle','Bağlantı motoru durduruldu.');}catch(e){text('status',e.message);}finally{refreshDisabled();}};
  async function run(action,payload,status,consume){
   if(operationBusy||connection==='loading')return;operationBusy=true;refreshDisabled();if(status)text(status,'İşlem sürüyor...');
-  try{const result=await window.api.tool(action,payload);if(!result.success)throw Error(result.error||'İşlem başarısız.');if(consume)await consume(result);if(status&&!['ping-results','https-results','dns-results'].includes(status))text(status,result.message||'İşlem tamamlandı.');}
+  try{const result=await window.api.tool(action,payload);if(!result.success)throw Error(result.error||'İşlem başarısız.');if(consume)await consume(result);if(status&&!['ping-results','https-results','dns-results','storage-progress'].includes(status))text(status,result.message||'İşlem tamamlandı.');}
   catch(e){if(status)text(status,e.message);}
   finally{operationBusy=false;refreshDisabled();}
  }
@@ -60,15 +60,33 @@ document.addEventListener('DOMContentLoaded',async()=>{
  button('power-restore','power-restore',{},'tools-status',reloadPower);
  button('inspect-btn','inspect',{},'system-status',result=>{const d=result.data,c=$('inspect-results');c.replaceChildren();const summary=document.createElement('p');summary.textContent=`Fiziksel bellek: ${d.memoryTotalMB} MB toplam / ${d.memoryFreeMB} MB kullanılabilir. Önbelleğin dolu olması tek başına sorun değildir.`;c.append(summary);for(const [heading,headers,rows] of [['Servisler',['Servis','Durum','Başlangıç'],d.services.map(s=>[s.name,s.status,s.startType])],['Ağ kartı kesme ayarı',['Kart','Okunan değer'],d.interrupt.map(x=>[x.adapter,x.value])],['Kayıtlı TCP değerleri (kaynağı bilinmiyor)',['Konum','Ayar','Değer'],d.legacy.map(x=>[x.location,x.name,x.value])]]){const h=document.createElement('h3');h.textContent=heading;c.append(h);const div=document.createElement('div');resultTable(div,headers,rows);c.append(div);}});
  button('export-btn','export',{},'system-status');
+
+ const bytes=n=>{if(!Number.isFinite(n))return '—';const units=['B','KB','MB','GB','TB'];let i=0;while(n>=1000&&i<units.length-1){n/=1000;i++;}return n.toFixed(i?1:0)+' '+units[i];};
+ const storageNote=d=>d.files+' dosya · '+bytes(d.bytes)+' · '+(d.folderCount??d.folders)+' klasör · '+d.skipped+' atlanan';
+ window.api.onStorageProgress(d=>text('storage-progress',storageNote(d)));
+ button('storage-pick','storage-pick',{},'storage-progress',result=>{text('storage-root',result.data.root);text('storage-progress','Klasör seçildi. Analiz et ile başlat.');});
+ $('storage-start').dataset.tool='storage-start';
+ $('storage-start').onclick=async()=>{if(operationBusy||connection==='loading')return;$('storage-cancel').disabled=false;$('storage-results').replaceChildren();try{await run('storage-start',{},'storage-progress',result=>{
+  const d=result.data;if(d.cancelled){text('storage-progress','Tarama iptal edildi. Dosyalar değiştirilmedi.');return;}
+  text('storage-progress',storageNote(d)+(d.partial?' · Kısmi sonuç: '+d.reason:' · Tarama tamamlandı.')+(d.volume?' · Sürücüde boş: '+bytes(d.volume.free)+' / '+bytes(d.volume.total):''));
+  const container=$('storage-results');for(const [title,headers,rows] of [['En büyük klasörler',['Klasör','Görünen boyut'],d.folders.map(x=>[x.name,bytes(x.bytes)])],['Dosya türleri',['Tür','Görünen boyut'],d.types.map(x=>[x.name,bytes(x.bytes)])],['En büyük dosyalar',['Dosya','Görünen boyut'],d.largest.map(x=>[x.path,bytes(x.bytes)])]]){const heading=document.createElement('h3');heading.textContent=title;container.append(heading);const box=document.createElement('div');resultTable(box,headers,rows);container.append(box);}
+ });}finally{$('storage-cancel').disabled=true;}};
+ $('storage-cancel').onclick=async()=>{const result=await window.api.cancelStorage();if(!result.success)text('storage-progress',result.error||'Tarama iptal edilemedi.');};
+ function renderShutdown(state){const seconds=state.remainingSeconds||0;const h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60),s=seconds%60;const remaining=[h,m,s].map(x=>String(x).padStart(2,'0')).join(':');text('shutdown-status',state.status==='scheduled'?remaining+' kaldı · '+state.message:state.message);$('shutdown-cancel').disabled=state.status!=='scheduled';$('shutdown-schedule').disabled=state.status==='scheduled'||state.status==='sending';$('shutdown-minutes').disabled=state.status==='scheduled';}
+ window.api.onShutdownState(renderShutdown);
+ $('shutdown-schedule').onclick=async()=>{try{const result=await window.api.scheduleShutdown(Number($('shutdown-minutes').value));if(!result.success)throw Error(result.error);renderShutdown(result.data);}catch(error){text('shutdown-status',error.message);}};
+ $('shutdown-cancel').onclick=async()=>{const result=await window.api.cancelShutdown();if(result.success)renderShutdown(result.data);else text('shutdown-status',result.error);};
+ try{const result=await window.api.getShutdownState();if(result.success)renderShutdown(result.data);}catch{text('shutdown-status','Zamanlayıcı durumu okunamadı.');}
  // Populate read-only configuration serially, without changing system settings.
  await run('adapters',{},'tools-status',renderAdapters);await run('power-read',{},'tools-status',renderPower);
  // Keep action results (tables) instead of replacing them with generic success text.
 });
 document.addEventListener('DOMContentLoaded',async()=>{
  const $=id=>document.getElementById(id),status=$('update-status'),check=$('update-check'),download=$('update-download'),install=$('update-install');
- function render(state){status.textContent='v'+state.version+' · '+state.message;check.disabled=['checking','downloading','downloaded'].includes(state.status);download.hidden=state.status!=='available';install.hidden=state.status!=='downloaded';}
+ function render(state){status.textContent='v'+state.version+' · '+state.message;check.disabled=['checking','downloading','downloaded','verifying','cancelling','installing'].includes(state.status);download.hidden=state.status!=='available';install.hidden=state.status!=='downloaded';$('update-cancel').hidden=!state.canCancel;$('update-cancel').disabled=state.status==='cancelling';}
  window.api.onUpdateState(render);
  async function action(button,fn){button.disabled=true;try{const result=await fn();if(result.success===false)status.textContent=result.message||result.error;else if(result.status)render(result);}catch{status.textContent='Güncelleme işlemi tamamlanamadı. Tekrar deneyin.';}finally{button.disabled=false;}}
+ $('update-cancel').onclick=()=>action($('update-cancel'),window.api.cancelUpdate);
  check.onclick=()=>action(check,window.api.checkUpdates);download.onclick=()=>action(download,window.api.downloadUpdate);install.onclick=()=>action(install,window.api.installUpdate);
  try{render(await window.api.getUpdateState());}catch{status.textContent='Güncelleme kontrolüne ulaşılamadı.';}
 });

@@ -1,73 +1,30 @@
-# Ata74 - GitHub guncelleme sistemi
+# Ata74 yayınlama
 
-Guncelleme deposu: https://github.com/Rwin74/Ata74
+## Normal güncelleme
 
-## Arkadasin ilk kurulumu
+1. `npm version patch --no-git-tag-version` ile sürümü artır.
+2. RELEASE-NOTES.md dosyasını son değişikliklere göre düzenle.
+3. `npm test` ve `./scripts/check-powershell.ps1` çalıştır.
+4. Kaynakları commit edip `git push origin main` ile gönder.
+5. `git tag v1.5.1` gibi package.json ile eşleşen etiket oluştur ve `git push origin v1.5.1` ile gönder.
+6. `npm run release` çalıştır. Derler, imzalar ve beş dosyalı Release yayınlar.
 
-Eski tasinabilir Ata74'u tepsi menusunden Cikis ile tamamen kapat.
-Ata74-Setup-1.4.0.exe dosyasini bir kez kur.
-Yeni uygulama her acilista GitHub Releases uzerinden surum kontrolu yapar.
-Yeni surumde Indir -> Kur ve Yeniden Baslat secilir.
-UAC yonetici onayi Windows tarafindan istenebilir.
-Eski 1.1.0 tasinabilir surum kendiliginden guncellenemez.
+GitHub Actions şu an hesap kısıtlaması nedeniyle çalışmıyor. Yerel yayın komutu Git Credential Manager oturumunu kullanabilir. Uygulamaya GitHub token'ı eklenmez. Actions yeniden açılırsa aynı özel anahtar `ATA74_SIGNING_PRIVATE_KEY` secret'ına yetkili kullanıcı tarafından ayrıca konmalıdır.
 
-## Depoya eklenecek kaynaklar
+## Anahtar
 
-Bu klasordeki main.js, preload.js, renderer.js, updater.js, profiles.js,
-index.html, styles.css, package.json, package-lock.json, update-config.json,
-scripts/, system-scripts/, system-tools.js, network-tools.js, tests/, .github/, .gitignore, core/ ve README dosyalarini depoya ekle.
-core/ icindeki EXE, DLL, SYS ve licenses/ dosyalari gerekli.
-node_modules/, dist*/, backup-before-*/ klasorlerini yukleme.
-GitHub web arayuzunden yuklerken gizli .github/workflows/release.yml dosyasini atlama.
-Kaynak deposunu klonlayip bu dosyalari icine kopyalamak da uygundur.
+Mevcut özel anahtar `.release-private/release-signing-key.pem` içindedir. Bu klasör Git'e ve pakete dahil edilmez. Güvenli yedeğini sakla. Anahtarı depoya, kaynak ZIP'ine, Release'a veya arkadaşına gönderme. Uygulama yalnızca update-public-key.pem dosyasını içerir.
 
-## Bundan sonraki surumu yayinlama
+Başka bilgisayarda yayın için aynı özel anahtar gerekir. `ATA74_SIGNING_KEY_FILE` ortam değişkeniyle özel anahtar dosyası seçilebilir. Açık anahtarla eşleşmeyen anahtar reddedilir. Anahtar üretme betiği mevcut açık anahtar varken özel anahtar yoksa yeni anahtar üretmez; önce eski anahtarı kurtarmak gerekir.
 
-Depoya bagli yerel Git klasorunde PowerShell:
+## Yayın dosyaları
 
-    npm ci
-    npm version patch --no-git-tag-version
-    git add .
-    git commit -m "Ata74 yeni surum"
-    $version = node -p "require('./package.json').version"
-    git tag "v$version"
-    git push origin HEAD
-    git push origin "v$version"
+- Ata74-Setup-SURUM.exe
+- Ata74-Setup-SURUM.exe.blockmap
+- latest.yml
+- ata74-update.json
+- ata74-update.sig
 
-Ornek: 1.4.0 -> 1.4.1. Her yayinda surum numarasi mutlaka artmali.
-GitHub Actions acik olmali. .github/workflows/release.yml Windows paketi olusturur
-ve ayni depoda herkese acik GitHub Release yayinlar.
-Actions varsayilan GITHUB_TOKEN kullanir; uygulamaya token gomulmez.
-Sadece normal commit/push guncelleme yayinlamaz; v etiketi gerekir.
-Tag ile package.json surumu uyusmazsa yayin durdurulur.
-Release tamamlanmadan arkadasina yeni surumun hazir oldugunu soyleme.
+Yalnızca EXE yüklemek yeterli değildir. İmza dosyaları yoksa 1.5.0 ve sonrası yeni sürümü reddeder. Windows Authenticode sertifikası henüz yoktur; ayrı yayın kaydı imzası SmartScreen uyarısını kaldırmaz.
 
-## Ilk 1.4.0 yayini
-
-Kaynaklar depoya eklendikten sonra v1.4.0 etiketi gonderilebilir.
-Alternatif: GitHub Releases > Draft a new release > v1.4.0 olustur ve
-dist-update/ icindeki Ata74-Setup-1.4.0.exe, .exe.blockmap ve latest.yml
-uc dosyasini ekleyip yayini Publish release ile herkese ac.
-Sonraki surumleri yukaridaki etiket akisi ile yayinla.
-
-## Yerelde paketleme
-
-    npm ci
-    npm run configure:github -- Rwin74/Ata74
-    npm run build
-
-Cikti: dist-update/Ata74-Setup-1.4.0.exe, .exe.blockmap ve latest.yml.
-Depo degisirse eski kurulumlar eski depoyu izlemeye devam eder;
-eski depodan yeni depo adresini iceren bir gecis surumu yayinlamak gerekir.
-
-## Sinirlar ve dogrulama
-
-GitHub ve indirme sunuculari yurt agindan erisilebilir olmali.
-Ag hatasinda ana uygulama kullanilmaya devam eder; Kontrol Et tekrar denenebilir.
-Indirme kullanici onayi olmadan baslamaz. Kurulum da ayri dugmeyle baslar.
-electron-updater SHA512 butunluk kontrolu uygular.
-Kod imzalama sertifikasi eklenmedi; Windows yayiniciyi tanimayabilir.
-Canli GitHub yayini ve iki gercek surum arasinda kurulum testi henuz yapilmadi.
-Deneme testleri: kullanici onayi, indirme ilerlemesi, yeniden baslatma oncesi temizlik,
-ag denemesi sirasinda kurulum engeli, eksik ayar, ag hatasi ve indirme hatasi.
-
+1.4.0 ve öncesinden 1.5.0'a ilk geçiş eski mekanizma ile olur. Yeni zorunlu imza doğrulaması 1.5.0 kurulduktan sonra devreye girer.
