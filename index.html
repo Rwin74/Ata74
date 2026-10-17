@@ -1,0 +1,138 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ata74</title><link rel="stylesheet" href="styles.css"></head><body>
+<div id="toast-container" class="toast-container"></div>
+<div class="app-shell">
+<aside class="sidebar"><div class="brand"><span class="brand-mark">a<span>74</span></span><div>Ata74<small>NETWORK CLIENT</small></div></div>
+<div class="workspace-label">ÇALIŞMA ALANI</div><nav class="tabs" aria-label="Ana menü">
+<button class="tab-btn active" data-target="bypass-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 5.6a9 9 0 1 0 11.2 0"/></svg><span>Bağlantı</span><span class="nav-dot"></span></button>
+<button class="tab-btn" data-target="boost-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r=".6"/></svg><span>Ağ ayarları</span></button>
+<button class="tab-btn" data-target="tools-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M9 6V4h6v2M4 12h16M10 12v3h4v-3"/></svg><span>Araçlar</span></button>
+<button class="tab-btn" data-target="pro-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></svg><span>Gelişmiş</span></button></nav>
+<div class="sidebar-bottom"><div class="local-badge"><span></span> Yerel istemci</div><div class="account"><span class="avatar">A</span><div><span id="greeting">Hoş geldin</span><small>Kişisel çalışma alanı</small></div></div></div></aside>
+<div class="main-shell"><header class="titlebar"><div><span class="breadcrumb">Çalışma alanı</span><span class="slash">/</span><span id="page-label">Bağlantı</span></div><div class="window-controls"><button id="minimize-btn" aria-label="Simge durumuna küçült">−</button><button id="maximize-btn" aria-label="Pencere boyutunu değiştir">□</button><button id="close-btn" aria-label="Tepsiye gizle">×</button></div></header>
+<main class="content"><div class="page-heading"><div><div class="eyebrow">ATA74 / NETWORK</div><h1 id="page-title">Bağlantın, kontrolünde.</h1><p id="page-description">Ağına uygun profili seç. Gerisini Ata74 denesin.</p></div><span class="client-tag">Windows istemcisi</span></div>
+<section id="bypass-view" class="view-panel active">
+<div class="connection-card"><div class="card-top"><span class="section-kicker">BAĞLANTI MERKEZİ</span><span id="connection-badge" class="state-badge">Hazır</span></div>
+<div class="connection-center"><div class="power-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 5.6a9 9 0 1 0 11.2 0"/></svg></div><h2 id="connection-title">Başlamaya hazır</h2><p id="connection-description">Bir profil seçerek bağlantıyı başlat.</p><div class="connection-actions"><button id="start-btn" class="btn primary">Bağlantıyı başlat</button><button id="stop-btn" class="btn secondary" disabled>Durdur</button></div></div>
+<div class="profile-row"><div class="profile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r=".6"/></svg></div><div class="profile-select"><label for="network-mode">Bağlantı profili</label><select id="network-mode" class="network-select"><option value="yurt_auto">Özel Yurt · Otomatik deneme</option><option value="default">Genel ağ / Mobil veri</option><option value="superonline">Superonline · Ev ağı</option><option value="kyk_discord">Yurt · Discord</option><option value="kyk_roblox">Yurt · Roblox</option></select></div><span class="profile-caption" id="profile-caption">5 yöntem, sırayla</span></div></div>
+<div class="details-grid"><div class="detail-card"><span class="section-kicker">ERİŞİM KONTROLÜ</span><div id="ping-indicator" class="ping-text"><span class="ping-dot"></span>Ölçülüyor...</div><p>Discord için ICMP yanıtı. HTTPS erişimi ayrıca denenir.</p></div><div class="detail-card"><span class="section-kicker">BAĞLANTI YÖNTEMİ</span><div class="detail-value">GoodbyeDPI <span>Yerel</span></div><p>Mevcut ağın üzerinden çalışır. IP adresini değiştirmez.</p></div></div>
+<div class="activity-panel"><div class="activity-header"><h3>İşlem durumu</h3><span>BU OTURUM</span></div><div id="status" class="status-text visible">Profil seçip bağlantıyı başlatabilirsin.</div></div>
+</section>
+            <div id="boost-view" class="view-panel" style="display: none;">
+                <div class="boost-card">
+                    <h3>TCP ayarları</h3>
+                    <p>TCP onay ve gecikme ayarlarını değiştirir.</p>
+                    <div class="btn-group">
+                        <button id="tcp-opt-btn" class="btn btn-small">Aç</button>
+                        <button id="tcp-rev-btn" class="btn btn-small btn-danger">Geri Al</button>
+                    </div>
+                </div>
+                <div class="boost-card">
+                    <h3>DNS seçimi</h3>
+                    <p>Yanıt süresini ölçerek DNS sunucusu seçer.</p>
+                    <div class="btn-group">
+                        <button id="dns-opt-btn" class="btn btn-small">Optimize Et</button>
+                        <button id="dns-rev-btn" class="btn btn-small btn-danger">Sıfırla</button>
+                    </div>
+                </div>
+                <div class="boost-card">
+                    <h3>DNS önbelleği</h3>
+                    <p>İnternet önbelleğini (DNS) sıfırlar.</p>
+                    <button id="flush-btn" class="btn btn-small">Temizle</button>
+                </div>
+                <div class="boost-card">
+                    <h3>Güç ve servisler</h3>
+                    <p>Güç planını değiştirir ve bazı Windows servislerini durdurur.</p>
+                    <div class="btn-group">
+                        <button id="fps-opt-btn" class="btn btn-small">Aç</button>
+                        <button id="fps-rev-btn" class="btn btn-small btn-danger">Geri Al</button>
+                    </div>
+                </div>
+                <div id="boost-status" class="status-text"></div>
+            </div>
+
+            <div id="tools-view" class="view-panel" style="display: none;">
+                <div class="boost-card">
+                    <h3>Klasör sıkıştırma</h3>
+                    <p>LZX Algoritması ile diskte yer açar.</p>
+                    <div class="btn-group">
+                        <button id="select-folder-btn" class="btn btn-small">Oyun Klasörü Seç</button>
+                    </div>
+                    <p id="selected-folder-text">Seçili Klasör: Yok</p>
+                    <div class="btn-group">
+                        <button id="compress-btn" class="btn btn-small">Sıkıştır</button>
+                        <button id="uncompress-btn" class="btn btn-small btn-danger">Geri Al</button>
+                    </div>
+                    <div id="compression-progress-container" style="display: none;">
+                        <div>
+                            <div id="compression-progress-bar"></div>
+                        </div>
+                        <p id="compression-progress-text">Hesaplanıyor...</p>
+                    </div>
+                </div>
+
+                <div class="boost-card">
+                    <h3>Uyku Zamanlayıcısı</h3>
+                    <p>Bilgisayarı ayarlanan sürede kapatır.</p>
+                    <div class="btn-group">
+                        <select id="timer-select" class="network-select">
+                            <option value="30">30 Dakika</option>
+                            <option value="60">1 Saat</option>
+                            <option value="120">2 Saat</option>
+                        </select>
+                    </div>
+                    <div class="btn-group">
+                        <button id="timer-start-btn" class="btn btn-small">Zamanla</button>
+                        <button id="timer-cancel-btn" class="btn btn-small btn-danger">İptal Et</button>
+                    </div>
+                </div>
+
+                <div class="boost-card">
+                    <h3>Masaüstünü düzenle</h3>
+                    <p>Kısayollar hariç tüm dosyaları toplar.</p>
+                    <button id="clean-desktop-btn" class="btn btn-small">Masaüstünü Düzenle</button>
+                </div>
+                <div id="tools-status" class="status-text"></div>
+            </div>
+
+            <div id="pro-view" class="view-panel" style="display: none;">
+                <div class="boost-card">
+                    <h3>Timer Resolution (0.5ms)</h3>
+                    <p>İşlem zamanlayıcısının çözünürlüğünü değiştirir.</p>
+                    <div class="btn-group">
+                        <button id="timer-opt-btn" class="btn btn-small">Aç</button>
+                        <button id="timer-rev-btn" class="btn btn-small btn-danger">Kapat</button>
+                    </div>
+                </div>
+                <div class="boost-card">
+                    <h3>MSI Mode Enabler</h3>
+                    <p>Desteklenen aygıtların kesme modunu değiştirir.</p>
+                    <div class="btn-group">
+                        <button id="msi-opt-btn" class="btn btn-small">Aktif Et</button>
+                        <button id="msi-rev-btn" class="btn btn-small btn-danger">Standart</button>
+                    </div>
+                </div>
+                <div class="boost-card">
+                    <h3>Interrupt Moderation</h3>
+                    <p>Ağ kartının kesme birleştirme ayarını değiştirir.</p>
+                    <div class="btn-group">
+                        <button id="int-opt-btn" class="btn btn-small">Devre dışı bırak</button>
+                        <button id="int-rev-btn" class="btn btn-small btn-danger">Standart</button>
+                    </div>
+                </div>
+                <div class="boost-card">
+                    <h3>Bekleme belleği</h3>
+                    <p>Windows bekleme belleğini temizler.</p>
+                    <button id="ram-opt-btn" class="btn btn-small">Şimdi Temizle</button>
+                </div>
+                <div class="boost-card">
+                    <h3>Windows telemetrisi</h3>
+                    <p>İlgili Windows tanılama servislerini yönetir.</p>
+                    <div class="btn-group">
+                        <button id="tel-opt-btn" class="btn btn-small">Devre dışı bırak</button>
+                        <button id="tel-rev-btn" class="btn btn-small btn-danger">Standart</button>
+                    </div>
+                </div>
+                <div id="pro-status" class="status-text"></div>
+            </div>
+
+</main><footer id="update-box" class="update-box"><div class="update-copy"><span class="update-indicator"></span><span id="update-status" aria-live="polite">Güncelleme kontrolü hazırlanıyor...</span></div><div class="update-actions"><button id="update-check">Kontrol et</button><button id="update-download" hidden>İndir</button><button id="update-install" hidden>Kur ve yeniden başlat</button></div></footer></div></div><script src="renderer.js"></script></body></html>
