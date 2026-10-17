@@ -1,9 +1,8 @@
-# Ata74 1.5.0
+# Ata74 1.6.0
 
-- Ed25519 imzalı sürüm kaydı: indirme öncesi yayıncı doğrulaması ve kurulum öncesi EXE özeti yeniden kontrolü. İmzasız/uyuşmayan yeni sürüm kurulmaz. İndirme iptal edilebilir.
-- Depolama analizi: seçilen klasör veya sürücüde büyük dosyalar, üst klasörler ve dosya türleri. Silme yapmaz, bağlantı klasörlerini atlar; erişilemeyen veya sınıra takılan tarama kısmi sonuç olarak gösterilir.
-- İptal edilebilir kapatma zamanlayıcısı: uygulama açık/tepsideyken çalışır. Uyku ve tam çıkışta iptal olur. Süre dolunca Windows'a zorlamasız normal kapatma isteği gönderir; kaydedilmemiş işler kapatmayı engelleyebilir.
+- Yinelenen dosya bulucu: aynı içerikli dosyaları SHA-256 ile gruplar, mantıksal kopya boyutunu gösterir ve konumlarını açar. Dosya silmez. Tarama durdurulabilir; boyut, süre ve okuma sınırlarında kısmi sonuç gösterilir.
+- Başlangıç uygulamaları: mevcut hesabın desteklenen Run kayıtlarını ve başlangıç kısayollarını kullanıcı onayıyla yedekleyerek duraklatır / geri yükler. Dışarıdan değişen kayıtların üzerine yazmaz. Sistem geneli kayıtlar salt okunurdur.
+- Windows'un başlangıç tercihi ayrıca geçerlidir; servisler, zamanlanmış görevler ve Store görevleri listede kapsanmaz.
+- Ed25519 imzalı güncelleme ve kurulum öncesi dosya doğrulaması korunur.
 
-**İlk geçiş:** 1.4.0 ve öncesi bu yeni imzayı kontrol etmez; 1.5.0'a ilk geçiş mevcut GitHub/HTTPS ve SHA512 mekanizmasıyla yapılır. İmza zorunluluğu 1.5.0 kurulduktan sonraki güncellemelerde geçerlidir. Bu imza Windows Authenticode sertifikası değildir; SmartScreen uyarısını kaldırmaz.
-
-**VPN değildir; ping düşüşü veya her filtreyi aşma garantisi yoktur.** Mevcut ölçüm ve geri alınabilir DNS/güç araçları korunur. Gerçek bilgisayarı kapatmadan, sahte kapatma yürütücüsüyle zamanlayıcı test edilmiştir.
+Testler geçici dosyalarda gerçek içerik taraması, sınırlar ve iptal; sahte kayıt arka ucunda yedekleme, çakışma ve geri yükleme senaryolarını kapsar. Gerçek başlangıç ayarları değiştirilmemiştir. Ata74 VPN değildir; ping/FPS artışı garanti etmez.

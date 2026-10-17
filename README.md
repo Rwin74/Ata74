@@ -1,4 +1,4 @@
-# Ata74 1.5.0
+# Ata74 1.6.0
 
 Windows için GoodbyeDPI istemcisi, ağ araçları, depolama analizi ve kapatma zamanlayıcısı.
 
@@ -16,6 +16,15 @@ Windows için GoodbyeDPI istemcisi, ağ araçları, depolama analizi ve kapatma 
 
 Seçilen normal klasör veya sürücüde en büyük dosyalar, üst klasör toplamları ve dosya türleri listelenir. Dosya içeriği okunmaz; hiçbir şey silinmez. Sembolik bağlantı/junction klasörleri takip edilmez. Erişim hatası ve 300.000 giriş / 90 saniye sınırı varsa sonuç kısmi olarak etiketlenir. Taranan dosyaların görünen mantıksal boyutu diskte tahsis edilen fiziksel alanla aynı değildir. Sıkıştırılmış/sparse dosyalar farklı yer kaplayabilir; görülen sabit bağlantı tekrarları bir kez sayılır. Tarama ayrı iş parçacığında çalışır ve durdurulabilir.
 
+## Yinelenen dosyalar
+
+Seçilen klasörde aynı boyuttaki dosyalar tam SHA-256 içerik özetiyle karşılaştırılır. Boş dosyalar, bağlantılar, sabit bağlantı tekrarları ve 2 GiB üstü dosyalar atlanır. 150.000 giriş, 120 saniye veya 4 GiB toplam içerik okuma sınırında kısmi sonuç gösterilir. Disk yükü oluşturabilir; durdurulabilir. En fazla 100 grup ve grup başına 20 yol gösterilir. Hiçbir dosya silinmez; yalnızca konumu açılır. Görünen fazladan kopya boyutu fiziksel disk kazancı garantisi değildir.
+
+## Başlangıç uygulamaları
+
+Ata74'ün çalıştığı hesabın HKCU Run kayıtları ve kullanıcı başlangıç klasöründeki küçük `.lnk` / `.url` dosyaları tek tek yedeklenerek duraklatılabilir ve geri yüklenebilir. Sistem genelindeki kayıtlar salt okunurdur. Çalışan uygulamalar kapatılmaz. İşlem öncesinde kullanıcı onayı istenir; dışarıdan değişen kayıtların üzerine yazılmaz. Kısayol yedeklerinin küçük kopyaları geri yüklemeden sonra da kullanıcı verisi klasöründe korunur.
+
+Liste, Windows'un etkinlik tercihiyle aynı şey değildir. Store başlangıç görevleri, servisler ve zamanlanmış görevler kapsam dışıdır; Windows başlangıç ayarları ayrıca açılabilir. Gerçek bilgisayarda yalnızca listeleme kontrol edilmiştir; değiştirme/geri yükleme testleri geçici dosyalar ve sahte kayıt arka ucuyla yapılmıştır.
 ## Kapatma zamanlayıcısı
 
 1–1440 dakika arasında, ayrı kullanıcı onayıyla planlanır. Geri sayım ve iptal düğmesi vardır. Uygulama tepsideyken çalışır; tam çıkış, uyku veya yeniden başlatma iptal eder. Süre dolunca `/s /t 0` ile normal kapatma istenir; `/f` kullanılmaz. Kaydedilmemiş işler kapatmayı engelleyebilir. Zamanlayıcı etkinken güncelleme kurulumu başlatılmaz; önce iptal edilmelidir.

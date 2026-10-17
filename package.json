@@ -1,6 +1,6 @@
 {
   "name": "roblox-local-launcher",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Windows network diagnostics and GoodbyeDPI client",
   "main": "main.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "electron-builder --win nsis --publish never && node scripts/sign-release.cjs",
     "release": "node scripts/publish-release.cjs",
     "configure:github": "node scripts/configure-github.cjs",
-    "test": "node tests/updater.cjs && node tests/tools.cjs && node tests/main.cjs && node tests/security.cjs && node tests/utilities.cjs",
+    "test": "node tests/updater.cjs && node tests/tools.cjs && node tests/main.cjs && node tests/security.cjs && node tests/utilities.cjs && node tests/next-tools.cjs",
     "sign:release": "node scripts/sign-release.cjs"
   },
   "build": {
@@ -39,6 +39,10 @@
       {
         "from": "storage-worker.js",
         "to": "storage-worker.js"
+      },
+      {
+        "from": "duplicate-worker.js",
+        "to": "duplicate-worker.js"
       }
     ],
     "files": [
@@ -55,7 +59,8 @@
       "network-tools.js",
       "utilities.js",
       "update-security.js",
-      "update-public-key.pem"
+      "update-public-key.pem",
+      "startup-manager.js"
     ],
     "compression": "normal",
     "nsis": {

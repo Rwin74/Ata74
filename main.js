@@ -1,18 +1,22 @@
 'use strict';
-const {app,BrowserWindow,ipcMain,Tray,Menu,nativeImage,dialog,powerMonitor}=require('electron');
+const {app,BrowserWindow,ipcMain,Tray,Menu,nativeImage,dialog,powerMonitor,shell}=require('electron');
 const fs=require('fs'),path=require('path'),os=require('os'),cp=require('child_process');
 const {setupUpdates}=require('./updater');
 const {runSystem,SettingsJournal,dnsEqual,powerEqual}=require('./system-tools');
 const {providers,validateTarget,summarize,benchmarkDns,httpsProbe}=require('./network-tools');
 const {profiles}=require('./profiles');
 const {StorageScanner,ShutdownTimer}=require('./utilities');
-let selectedStorageRoot=null;
+const {StartupManager}=require('./startup-manager');
+let selectedStorageRoot=null,selectedDuplicateRoot=null;
+let duplicateResults=null;
 let mainWindow,tray,dpiProcess=null,launcherBusy=false,toolBusy=false,isQuitting=false,token=0,launcherAbort=null;
 const recentDiagnostics={};
 if(!app.requestSingleInstanceLock()){app.quit();return;}
 app.on('second-instance',()=>{mainWindow?.show();if(mainWindow?.isMinimized())mainWindow.restore();mainWindow?.focus();});
 const send=(channel,value)=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send(channel,value);};
 const storage=new StorageScanner(path.join(app.isPackaged?process.resourcesPath:__dirname,'storage-worker.js'),data=>send('storage-progress',data));
+const duplicates=new StorageScanner(path.join(app.isPackaged?process.resourcesPath:__dirname,'duplicate-worker.js'),data=>send('duplicate-progress',data));
+const startup=()=>new StartupManager({directory:path.join(app.getPath('userData'),'startup-manager-v1'),backend:(action,payload)=>runSystem(path.join(app.isPackaged?process.resourcesPath:__dirname,'system-scripts','startup.ps1'),action,payload)});
 const shutdownTimer=new ShutdownTimer({execute:()=>new Promise((resolve,reject)=>cp.execFile(path.join(process.env.SystemRoot||'C:\\Windows','System32','shutdown.exe'),['/s','/t','0'],{windowsHide:true,timeout:10000},error=>error?reject(error):resolve())),onChange:state=>send('shutdown-state',state)});
 const scriptPath=()=>path.join(app.isPackaged?process.resourcesPath:__dirname,'system-scripts','system.ps1');
 const system=(action,payload)=>runSystem(scriptPath(),action,payload);
@@ -27,13 +31,13 @@ function createWindow(){
  mainWindow.webContents.on('will-navigate',event=>event.preventDefault());
 }
 async function killDPI(){const p=dpiProcess;if(!p)return;dpiProcess=null;if(p.exitCode!==null)return;await new Promise((resolve,reject)=>{const done=()=>{clearTimeout(timer);resolve();};const timer=setTimeout(()=>{p.removeListener('close',done);reject(Error('Önceki motor kapanmadı. Tekrar deneyin.'));},2500);p.once('close',done);p.kill();});}
-function stopOnQuit(){storage.cancel();shutdownTimer.dispose();token++;launcherAbort?.abort();if(dpiProcess){dpiProcess.kill();dpiProcess=null;}}
+function stopOnQuit(){storage.cancel();duplicates.cancel();shutdownTimer.dispose();token++;launcherAbort?.abort();if(dpiProcess){dpiProcess.kill();dpiProcess=null;}}
 app.on('will-quit',stopOnQuit);
 app.whenReady().then(()=>{
  createWindow();
  powerMonitor?.on('resume',()=>shutdownTimer.cancel('Bilgisayar uykudan döndüğü için zamanlayıcı iptal edildi.'));
  const {autoUpdater}=require('electron-updater');
- const updates=setupUpdates({app,ipcMain,authorize:trusted,updater:autoUpdater,configured:Boolean(require('./update-config.json').owner),send:state=>send('updates-event',state),canInstall:()=>!launcherBusy&&!toolBusy&&!storage.active&&!shutdownTimer.active,onInstallError:()=>{isQuitting=false;},beforeInstall:()=>{isQuitting=true;stopOnQuit();}});
+ const updates=setupUpdates({app,ipcMain,authorize:trusted,updater:autoUpdater,configured:Boolean(require('./update-config.json').owner),send:state=>send('updates-event',state),canInstall:()=>!launcherBusy&&!toolBusy&&!storage.active&&!duplicates.active&&!shutdownTimer.active,onInstallError:()=>{isQuitting=false;},beforeInstall:()=>{isQuitting=true;stopOnQuit();}});
  mainWindow.webContents.once('did-finish-load',()=>updates.check());
  const icon=nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAApSURBVDhPY3gro/iPgQhgAmKCw0xQDAyD1gChbDSMFgOhAoaBofYBAwAAB2AHA7fV9jAAAAAASUVORK5CYII=');
  tray=new Tray(icon);tray.setToolTip('Ata74');tray.setContextMenu(Menu.buildFromTemplate([{label:'Göster',click:()=>mainWindow.show()},{label:'Çıkış',click:()=>{isQuitting=true;app.quit();}}]));tray.on('click',()=>mainWindow.show());
@@ -83,6 +87,25 @@ handle('tool',async(event,action,payload={})=>{
  toolBusy=true;
  try{
   switch(action){
+   case 'duplicate-pick':{
+    const result=await dialog.showOpenDialog(mainWindow,{properties:['openDirectory'],title:'Yinelenen dosyaların aranacağı klasörü seç'});if(result.canceled)return {success:false,error:'Klasör seçimi iptal edildi.'};
+    const stat=await fs.promises.lstat(result.filePaths[0]);if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('Normal bir klasör seçin.');selectedDuplicateRoot=await fs.promises.realpath(result.filePaths[0]);duplicateResults=null;return {success:true,data:{root:selectedDuplicateRoot}};
+   }
+   case 'duplicate-start':if(!selectedDuplicateRoot)throw Error('Önce klasör seçin.');duplicateResults=await duplicates.start(selectedDuplicateRoot);return {success:true,data:duplicateResults};
+   case 'duplicate-open':{
+    if(!duplicateResults||duplicateResults.cancelled||typeof payload.path!=='string'||!duplicateResults.groups.some(g=>g.paths.includes(payload.path)))throw Error('Yalnızca son taramada gösterilen dosyanın konumu açılabilir.');
+    const actual=await fs.promises.realpath(payload.path),rel=path.relative(duplicateResults.root,actual),stat=await fs.promises.lstat(payload.path);if(path.isAbsolute(rel)||rel==='..'||rel.startsWith('..'+path.sep)||stat.isSymbolicLink()||!stat.isFile())throw Error('Dosya taşınmış veya bağlantıya dönüşmüş. Yeniden tarayın.');shell.showItemInFolder(payload.path);return {success:true,message:'Dosya konumu açıldı. Hiçbir şey silinmedi.'};
+   }
+   case 'startup-list':return {success:true,data:await startup().list()};
+   case 'startup-disable':{
+    const list=await startup().list(),entry=list.entries.find(x=>x.id===payload.id);if(!entry||!entry.writable||entry.hasBackup)throw Error('Bu kayıt doğrudan duraklatılamıyor.');
+    await confirm(entry.label+' başlangıç kaydı duraklatılsın mı?',String(entry.command).slice(0,350)+'\n\nYalnızca Ata74’ün çalıştığı hesabın kaydı yedeklenip kaldırılır/taşınır. Çalışan uygulama kapatılmaz. Güvenlik, yedekleme ve senkronizasyon uygulamalarının işlevi etkilenebilir. İstersen kayıtlı haline geri dönebilirsin.');
+    const result=await startup().disable(payload.id,entry.command);return {success:true,...result};
+   }
+   case 'startup-restore':{
+    const list=await startup().list(),entry=list.entries.find(x=>x.id===payload.id&&x.hasBackup);if(!entry)throw Error('Kayıtlı yedek bulunamadı.');await confirm(entry.label+' başlangıç kaydı geri yüklensin mi?','Ata74’ün kaydettiği önceki kayıt geri yüklenir. Aynı adla farklı bir kayıt varsa üzerine yazılmaz. Windows’un kendi başlangıç ayarları ayrıca geçerlidir.');return {success:true,...await startup().restore(payload.id)};
+   }
+   case 'startup-settings':await shell.openExternal('ms-settings:startupapps');return {success:true,message:'Windows başlangıç uygulamaları ayarları açıldı.'};
    case 'storage-pick':{
     const result=await dialog.showOpenDialog(mainWindow,{properties:['openDirectory'],title:'Analiz edilecek klasör veya sürücüyü seç'});if(result.canceled)return {success:false,error:'Klasör seçimi iptal edildi.'};
     const stat=await fs.promises.lstat(result.filePaths[0]);if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('Bağlantı yerine normal bir klasör seçin.');selectedStorageRoot=await fs.promises.realpath(result.filePaths[0]);return {success:true,data:{root:selectedStorageRoot}};
@@ -138,3 +161,5 @@ handle('shutdown-schedule',async(event,minutes)=>{
  await confirm(minutes+' dakika sonra normal kapatma planlansın mı?','Uygulama açık veya tepsideyken çalışır. Tam çıkış, uyku veya yeniden başlatma zamanlayıcıyı iptal eder. Dosyalar zorla kapatılmaz; kaydedilmemiş işler kapatmayı engelleyebilir. Süre dolmadan İptal ile durdurabilirsiniz.');
  return {success:true,data:shutdownTimer.schedule(minutes)};
 });
+
+handle('duplicate-cancel',()=>({success:true,cancelled:duplicates.cancel()}));

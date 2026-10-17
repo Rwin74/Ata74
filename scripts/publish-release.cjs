@@ -14,7 +14,7 @@ async function main(){
  if(!process.argv.includes('--skip-build')){const result=cp.spawnSync(process.platform==='win32'?(process.env.ComSpec||'cmd.exe'):'npm',process.platform==='win32'?['/d','/s','/c','npm run build']:['run','build'],{cwd:root,stdio:'inherit',windowsHide:true});if(result.status!==0)throw Error('Derleme veya imzalama başarısız. Yayın yapılmadı.');}
  const asar=require('@electron/asar'),resources=path.join(root,'dist-update/win-unpacked/resources');
  for(const name of pkg.build.files){if(name==='package.json')continue;if(!asar.extractFile(path.join(resources,'app.asar'),name).equals(fs.readFileSync(path.join(root,name))))throw Error('Paket güncel kaynakla uyuşmuyor: '+name);}
- for(const name of ['storage-worker.js','system-scripts/system.ps1'])if(!fs.readFileSync(path.join(resources,name)).equals(fs.readFileSync(path.join(root,name))))throw Error('Paket kaynağı uyuşmuyor: '+name);
+ for(const name of ['storage-worker.js','duplicate-worker.js','system-scripts/system.ps1','system-scripts/startup.ps1'])if(!fs.readFileSync(path.join(resources,name)).equals(fs.readFileSync(path.join(root,name))))throw Error('Paket kaynağı uyuşmuyor: '+name);
  const sign=cp.spawnSync(process.execPath,[path.join(__dirname,'sign-release.cjs')],{cwd:root,stdio:'inherit',windowsHide:true});if(sign.status!==0)throw Error('İmza üretilemedi. Yayın yapılmadı.');
  const files=[`Ata74-Setup-${pkg.version}.exe`,`Ata74-Setup-${pkg.version}.exe.blockmap`,'latest.yml','ata74-update.json','ata74-update.sig'];
  const notes=fs.readFileSync(path.join(root,'RELEASE-NOTES.md'),'utf8');

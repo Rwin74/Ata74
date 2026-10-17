@@ -1,6 +1,7 @@
 'use strict';
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('api',{
+ cancelDuplicates:()=>ipcRenderer.invoke('duplicate-cancel'),onDuplicateProgress:fn=>ipcRenderer.on('duplicate-progress',(_e,value)=>fn(value)),
  cancelStorage:()=>ipcRenderer.invoke('storage-cancel'),onStorageProgress:fn=>ipcRenderer.on('storage-progress',(_e,value)=>fn(value)),
  getShutdownState:()=>ipcRenderer.invoke('shutdown-state'),scheduleShutdown:minutes=>ipcRenderer.invoke('shutdown-schedule',minutes),cancelShutdown:()=>ipcRenderer.invoke('shutdown-cancel'),onShutdownState:fn=>ipcRenderer.on('shutdown-state',(_e,value)=>fn(value)),
  cancelUpdate:()=>ipcRenderer.invoke('updates-cancel'),
