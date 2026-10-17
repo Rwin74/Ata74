@@ -1,6 +1,6 @@
 {
   "name": "roblox-local-launcher",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Windows network diagnostics and GoodbyeDPI client",
   "main": "main.js",
   "scripts": {

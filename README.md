@@ -1,4 +1,4 @@
-# Ata74 1.6.0
+# Ata74 1.6.1
 
 Windows için GoodbyeDPI istemcisi, ağ araçları, depolama analizi ve kapatma zamanlayıcısı.
 
