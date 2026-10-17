@@ -6,7 +6,7 @@ function fixture(configured=true){const updater=new EventEmitter(),h={};let down
  await f.h['updates-download']();assert.equal(f.counts().downloads,0);
  await f.api.check();assert.equal(f.api.getState().status,'available');assert.equal(f.counts().downloads,0);
  await f.h['updates-download']();assert.equal(f.api.getState().status,'downloaded');assert.equal(f.counts().downloads,1);
- assert(f.h['updates-install']().success);await new Promise(setImmediate);assert.deepEqual(f.counts(),{downloads:1,installs:1,cleanups:1});
+ assert(f.h['updates-install']().success);assert.equal(f.h['updates-install']().success,false);await new Promise(setImmediate);assert.deepEqual(f.counts(),{downloads:1,installs:1,cleanups:1});
  f=fixture();await f.api.check();await f.h['updates-download']();f.deny();assert.equal(f.h['updates-install']().success,false);
  f=fixture(false);await f.api.check();assert.equal(f.api.getState().status,'unconfigured');
  f=fixture();f.updater.checkForUpdates=async()=>{throw Error('offline')};await f.api.check();assert.equal(f.api.getState().status,'error');
@@ -14,4 +14,5 @@ function fixture(configured=true){const updater=new EventEmitter(),h={};let down
  f=fixture();f.updater.checkForUpdates=async()=>f.updater.emit('update-not-available');await f.api.check();assert.equal(f.api.getState().status,'current');
  console.log('PASS: consent, progress, install, cleanup, busy guard, missing config, offline, failed download and current version');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 

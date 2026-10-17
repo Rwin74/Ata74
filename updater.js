@@ -1,8 +1,9 @@
 'use strict';
 // All download URLs and hashes are handled by electron-updater, never by the renderer.
-function setupUpdates({ app, ipcMain, updater, send, beforeInstall, canInstall, configured }) {
+function setupUpdates({ app, ipcMain, updater, send, beforeInstall, canInstall, configured, authorize = () => {} }) {
     let state = { status: 'idle', version: app.getVersion(), message: 'Güncelleme kontrolü hazır.' };
     let busy = false;
+    let installing = false;
     const publish = patch => { state = { ...state, ...patch }; send(state); };
     updater.autoDownload = false;
     updater.autoInstallOnAppQuit = false;
@@ -29,9 +30,10 @@ function setupUpdates({ app, ipcMain, updater, send, beforeInstall, canInstall, 
         finally { busy = false; }
         return state;
     }
-    ipcMain.handle('updates-state', () => state);
-    ipcMain.handle('updates-check', check);
-    ipcMain.handle('updates-download', async () => {
+    ipcMain.handle('updates-state', event => { authorize(event); return state; });
+    ipcMain.handle('updates-check', event => { authorize(event); return check(); });
+    ipcMain.handle('updates-download', async event => {
+        authorize(event);
         if (busy || state.status !== 'available') return state;
         busy = true;
         publish({ status: 'downloading', percent: 0, message: 'İndirme başlıyor...' });
@@ -40,11 +42,17 @@ function setupUpdates({ app, ipcMain, updater, send, beforeInstall, canInstall, 
         finally { busy = false; }
         return state;
     });
-    ipcMain.handle('updates-install', () => {
+    ipcMain.handle('updates-install', event => {
+        authorize(event);
+        if (installing) return { success: false, message: 'Kurulum zaten başlatılıyor.' };
         if (state.status !== 'downloaded') return { success: false, message: 'Önce güncellemeyi indirin.' };
-        if (!canInstall()) return { success: false, message: 'Önce devam eden ağ denemesinin bitmesini bekleyin.' };
+        if (!canInstall()) return { success: false, message: 'Önce devam eden işlemin bitmesini bekleyin.' };
         // Reply to IPC before closing the app for the installer.
-        setImmediate(() => { beforeInstall(); updater.quitAndInstall(false, true); });
+        installing = true;
+        setImmediate(() => {
+            try { beforeInstall(); updater.quitAndInstall(false, true); }
+            catch (error) { installing = false; publish({status:'downloaded', message:'Kurulum başlatılamadı. Tekrar deneyebilirsiniz.'}); }
+        });
         return { success: true };
     });
     return { check, getState: () => state };

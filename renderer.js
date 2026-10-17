@@ -1,336 +1,74 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    const greetingEl = document.getElementById('greeting');
-    const startBtn = document.getElementById('start-btn');
-    const statusEl = document.getElementById('status');
-    const closeBtn = document.getElementById('close-btn');
-
-    // Get system username via IPC
-    try {
-        const username = await window.api.getUsername();
-        greetingEl.textContent = `${username}`;
-    } catch (err) {
-        console.error('Failed to get username:', err);
-        greetingEl.textContent = 'Hoşgeldin';
-    }
-
-    
-    // Close button
-    document.getElementById('close-btn').addEventListener('click', () => {
-        window.api.closeApp();
-    });
-
-    function showToast(msg, type = 'success') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerText = msg;
-        container.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    // Ping updater
-    const pingIndicator = document.getElementById('ping-indicator');
-    
-    async function updatePing() {
-        try {
-            const ping = await window.api.getPing();
-            if (ping === -1) {
-                pingIndicator.innerHTML = '<span class="ping-dot"></span>Ping: Zaman Aşımı';
-                pingIndicator.className = 'ping-text ping-bad';
-            } else if (ping === null) {
-                pingIndicator.innerHTML = '<span class="ping-dot"></span>Ping: Hesaplanıyor...';
-                pingIndicator.className = 'ping-text';
-            } else {
-                pingIndicator.innerHTML = `<span class="ping-dot"></span>Ping: ${ping} ms`;
-                if (ping < 70) pingIndicator.className = 'ping-text ping-good';
-                else if (ping < 150) pingIndicator.className = 'ping-text ping-med';
-                else pingIndicator.className = 'ping-text ping-bad';
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    
-    // Her 3 saniyede bir ping güncelle
-    setInterval(updatePing, 3000);
-    updatePing();
-
-    const card = document.querySelector('.connection-card');
-    const stopBtn = document.getElementById('stop-btn');
-    function connectionState(state, title, description, badge) {
-        card.dataset.state = state;
-        document.getElementById('connection-title').textContent = title;
-        document.getElementById('connection-description').textContent = description;
-        document.getElementById('connection-badge').textContent = badge;
-        stopBtn.disabled = state !== 'running';
-        document.getElementById('network-mode').disabled = state === 'loading';
-    }
-    document.getElementById('minimize-btn').addEventListener('click', () => window.api.minimizeWindow());
-    document.getElementById('maximize-btn').addEventListener('click', () => window.api.maximizeWindow());
-    document.getElementById('network-mode').addEventListener('change', event => {
-        document.getElementById('profile-caption').textContent = event.target.value === 'yurt_auto' ? '5 yöntem, sırayla' : 'Tek profil';
-    });
-    // Handle start button
-    startBtn.addEventListener('click', async () => {
-        if (startBtn.classList.contains('loading') || startBtn.classList.contains('success')) {
-            return; // Prevent multiple clicks
-        }
-
-        connectionState('loading', 'Bağlantı deneniyor', 'Seçili profil için erişim kontrol ediliyor.', 'Deneniyor');
-        // Set Loading state
-        startBtn.classList.add('loading');
-        startBtn.textContent = 'Bağlanıyor...';
-        statusEl.textContent = 'Profil hazırlanıyor; otomatik deneme yaklaşık 40 saniye sürebilir...';
-        statusEl.classList.add('visible');
-
-        try {
-            // Trigger main process start sequence
-            const mode = document.getElementById('network-mode').value;
-            const result = await window.api.startLauncher(mode);
-            
-            if (result.success) {
-                // Set Success state
-                startBtn.classList.remove('loading');
-                startBtn.classList.add('success');
-                startBtn.textContent = 'Yeniden Dene';
-                startBtn.classList.remove('success');
-                statusEl.textContent = result.message;
-                connectionState('running', mode === 'yurt_auto' ? 'HTTPS erişimi doğrulandı' : 'Profil çalışıyor', mode === 'yurt_auto' ? 'Discord’u açabilirsin. Ses bağlantısını ayrıca dene.' : 'Uygulamayı açarak erişimi kontrol edebilirsin.', 'Çalışıyor');
-            } else {
-                throw new Error(result.error || 'Bilinmeyen bir hata oluştu.');
-            }
-        } catch (error) {
-            startBtn.classList.remove('loading');
-            startBtn.textContent = 'Yeniden dene';
-            connectionState('error', 'Bağlantı doğrulanamadı', 'Aşağıdaki işlem durumunu kontrol edip tekrar dene.', 'Kontrol gerekli');
-            statusEl.textContent = 'Bağlantı Başarısız: ' + error.message;
-            statusEl.className = 'status-text visible';
-        }
-    });
-
-    window.api.onLauncherProgress(text => { statusEl.textContent = text; });
-    document.getElementById('stop-btn').addEventListener('click', async () => {
-        if (startBtn.classList.contains('loading')) return;
-        await window.api.stopLauncher();
-        statusEl.textContent = 'Durduruldu.';
-        startBtn.classList.remove('success');
-        startBtn.textContent = 'Bağlantıyı başlat';
-        connectionState('idle', 'Başlamaya hazır', 'Bir profil seçerek bağlantıyı başlat.', 'Hazır');
-    });
-
-    // Tabs logic
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const viewPanels = document.querySelectorAll('.view-panel');
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            viewPanels.forEach(p => p.style.display = 'none');
-            
-            btn.classList.add('active');
-            document.getElementById(btn.dataset.target).style.display = 'block';
-            const pages = {
-                'bypass-view': ['Bağlantı', 'Bağlantın, kontrolünde.', 'Ağına uygun profili seç. Gerisini Ata74 denesin.'],
-                'boost-view': ['Ağ ayarları', 'Ağına ince ayar.', 'DNS, TCP ve güç seçeneklerini tek yerden yönet.'],
-                'tools-view': ['Araçlar', 'Günlük işlere biraz alan.', 'Dosyalarını düzenle, sıkıştır ve zamanını planla.'],
-                'pro-view': ['Gelişmiş', 'Daha fazla kontrol.', 'Windows servisleri ve donanım ayarları. Değişiklikler sistem genelinde uygulanır.']
-            };
-            const page = pages[btn.dataset.target];
-            document.getElementById('page-label').textContent = page[0];
-            document.getElementById('page-title').textContent = page[1];
-            document.getElementById('page-description').textContent = page[2];
-            document.querySelector('.content').scrollTop = 0;
-        });
-    });
-
-    // Boost Logic
-    const boostStatus = document.getElementById('boost-status');
-    const setBoostStatus = (msg, isSuccess = true) => {
-        boostStatus.innerText = msg;
-        boostStatus.className = 'status-text visible ' + (isSuccess ? 'status-success' : '');
-        showToast(msg, isSuccess ? 'success' : 'error');
-    };
-
-    document.getElementById('tcp-opt-btn').addEventListener('click', async () => {
-        setBoostStatus('Oyun modu açılıyor...');
-        const res = await window.api.optimizeTCP();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('tcp-rev-btn').addEventListener('click', async () => {
-        setBoostStatus('Oyun modu kapatılıyor...');
-        const res = await window.api.revertTCP();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('dns-opt-btn').addEventListener('click', async () => {
-        setBoostStatus('DNS test ediliyor... (10-15sn sürebilir)');
-        const res = await window.api.optimizeDNS();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('dns-rev-btn').addEventListener('click', async () => {
-        setBoostStatus('DNS varsayılana sıfırlanıyor...');
-        const res = await window.api.revertDNS();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('flush-btn').addEventListener('click', async () => {
-        setBoostStatus('Ağ temizleniyor...');
-        const res = await window.api.flushNetwork();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('fps-opt-btn').addEventListener('click', async () => {
-        setBoostStatus('FPS modu açılıyor...');
-        const res = await window.api.optimizeFPS();
-        setBoostStatus(res.message, res.success);
-    });
-    document.getElementById('fps-rev-btn').addEventListener('click', async () => {
-        setBoostStatus('FPS modu kapatılıyor...');
-        const res = await window.api.revertFPS();
-        setBoostStatus(res.message, res.success);
-    });
-
-    // Tools Logic
-    const toolsStatus = document.getElementById('tools-status');
-    const setToolsStatus = (msg, isSuccess = true) => {
-        toolsStatus.innerText = msg;
-        toolsStatus.className = 'status-text visible ' + (isSuccess ? 'status-success' : '');
-        showToast(msg, isSuccess ? 'success' : 'error');
-    };
-
-    let selectedFolder = null;
-    document.getElementById('select-folder-btn').addEventListener('click', async () => {
-        const res = await window.api.selectFolder();
-        if (res.success && res.folder) {
-            selectedFolder = res.folder;
-            document.getElementById('selected-folder-text').innerText = 'Seçili: ' + selectedFolder;
-        }
-    });
-
-    document.getElementById('compress-btn').addEventListener('click', async () => {
-        if (!selectedFolder) return setToolsStatus('Lütfen önce klasör seçin!', false);
-        setToolsStatus('Sıkıştırılıyor... (Bu işlem uzun sürebilir, bekleyin)');
-        const res = await window.api.compressFolder(selectedFolder);
-        setToolsStatus(res.message, res.success);
-    });
-
-    document.getElementById('uncompress-btn').addEventListener('click', async () => {
-        if (!selectedFolder) return setToolsStatus('Lütfen önce klasör seçin!', false);
-        setToolsStatus('Geri alınıyor... Lütfen bekleyin.');
-        const res = await window.api.uncompressFolder(selectedFolder);
-        setToolsStatus(res.message, res.success);
-    });
-
-    if (window.api.onCompressProgress) {
-        window.api.onCompressProgress((data) => {
-            const container = document.getElementById('compression-progress-container');
-            const text = document.getElementById('compression-progress-text');
-            if (data.count === 'done') {
-                container.style.display = 'none';
-            } else {
-                container.style.display = 'block';
-                const action = data.type === 'compress' ? 'Sıkıştırılıyor' : 'Geri alınıyor';
-                text.innerText = `${action}... (${data.count} dosya işlendi)`;
-            }
-        });
-    }
-
-    document.getElementById('timer-start-btn').addEventListener('click', async () => {
-        const mins = document.getElementById('timer-select').value;
-        setToolsStatus('Zamanlayıcı ayarlanıyor...');
-        const res = await window.api.setShutdown(mins);
-        setToolsStatus(res.message, res.success);
-    });
-
-    document.getElementById('timer-cancel-btn').addEventListener('click', async () => {
-        setToolsStatus('Zamanlayıcı iptal ediliyor...');
-        const res = await window.api.cancelShutdown();
-        setToolsStatus(res.message, res.success);
-    });
-
-    document.getElementById('clean-desktop-btn').addEventListener('click', async () => {
-        setToolsStatus('Masaüstü toplanıyor...');
-        const res = await window.api.cleanDesktop();
-        setToolsStatus(res.message, res.success);
-    });
-
-    // PRO Logic
-    const proStatus = document.getElementById('pro-status');
-    const setProStatus = (msg, isSuccess = true) => {
-        proStatus.innerText = msg;
-        proStatus.className = 'status-text visible ' + (isSuccess ? 'status-success' : '');
-        showToast(msg, isSuccess ? 'success' : 'error');
-    };
-
-    document.getElementById('timer-opt-btn').addEventListener('click', async () => {
-        setProStatus('Zamanlayıcı çözünürlüğü değiştiriliyor...');
-        const res = await window.api.enableTimerRes();
-        setProStatus(res.message, res.success);
-    });
-    document.getElementById('timer-rev-btn').addEventListener('click', async () => {
-        setProStatus('Zamanlayıcı kapatılıyor...');
-        const res = await window.api.disableTimerRes();
-        setProStatus(res.message, res.success);
-    });
-
-    document.getElementById('msi-opt-btn').addEventListener('click', async () => {
-        setProStatus('Kayıt Defteri MSI yapılandırması uygulanıyor...');
-        const res = await window.api.enableMSI();
-        setProStatus(res.message, res.success);
-    });
-    document.getElementById('msi-rev-btn').addEventListener('click', async () => {
-        setProStatus('Kayıt Defteri geri alınıyor...');
-        const res = await window.api.disableMSI();
-        setProStatus(res.message, res.success);
-    });
-
-    document.getElementById('int-opt-btn').addEventListener('click', async () => {
-        setProStatus('Ağ kartı yeniden yapılandırılıyor (İnternet anlık gidebilir)...');
-        const res = await window.api.disableInterrupt();
-        setProStatus(res.message, res.success);
-    });
-    document.getElementById('int-rev-btn').addEventListener('click', async () => {
-        setProStatus('Ağ kartı standart ayarlara dönüyor...');
-        const res = await window.api.enableInterrupt();
-        setProStatus(res.message, res.success);
-    });
-
-    document.getElementById('ram-opt-btn').addEventListener('click', async () => {
-        setProStatus('Bekleme belleği temizleniyor...');
-        const res = await window.api.flushRAM();
-        setProStatus(res.message, res.success);
-    });
-
-    document.getElementById('tel-opt-btn').addEventListener('click', async () => {
-        setProStatus('Tanılama servisleri kapatılıyor...');
-        const res = await window.api.nukeTelemetry();
-        setProStatus(res.message, res.success);
-    });
-    document.getElementById('tel-rev-btn').addEventListener('click', async () => {
-        setProStatus('Servisler eski haline getiriliyor...');
-        const res = await window.api.restoreTelemetry();
-        setProStatus(res.message, res.success);
-    });
+'use strict';
+document.addEventListener('DOMContentLoaded',async()=>{
+ const $=id=>document.getElementById(id);let operationBusy=false,connection='idle',backups=[],adapters=[],lastPing=null;
+ const statuses=['status','tools-status','system-status'];
+ const text=(id,value)=>{$(id).textContent=value;};
+ const fmt=x=>x===null||x===undefined?'—':x+' ms';
+ function resultTable(container,headers,rows){container.replaceChildren();const table=document.createElement('table'),thead=document.createElement('thead'),tr=document.createElement('tr');for(const h of headers){const th=document.createElement('th');th.textContent=h;tr.append(th);}thead.append(tr);table.append(thead);const tbody=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const value of row){const td=document.createElement('td');td.textContent=value??'—';tr.append(td);}tbody.append(tr);}table.append(tbody);container.append(table);}
+ function refreshDisabled(){
+  for(const b of document.querySelectorAll('[data-tool]'))b.disabled=operationBusy||connection==='loading';
+  $('start-btn').disabled=operationBusy||connection==='loading';
+  $('stop-btn').disabled=!['loading','running'].includes(connection);
+  $('dns-restore').disabled=operationBusy||connection==='loading'||!backups.includes('dns:'+$('adapter-select').value);
+  const selected=adapters.find(x=>x.id===$('adapter-select').value);
+  $('dns-apply').disabled=operationBusy||connection==='loading'||!selected||selected.status!=='Up'||!selected.physical;
+  $('power-restore').disabled=operationBusy||connection==='loading'||$('power-restore').dataset.hasBackup!=='true';
+  $('power-apply').disabled=operationBusy||connection==='loading'||!$('power-select').value;
+  $('network-mode').disabled=connection==='loading';
+ }
+ function connectionState(state,message,verified=false){connection=state;const card=document.querySelector('.connection-card');card.dataset.state=state;
+  const data={idle:['Başlamaya hazır','Bir profil seçerek bağlantıyı başlat.','Hazır'],loading:['Bağlantı deneniyor','İstediğin zaman Durdur ile iptal edebilirsin.','Deneniyor'],running:[verified?'HTTPS erişimi doğrulandı':'Motor çalışıyor',verified?'Discord’u açabilirsin. Ses bağlantısını ayrıca dene.':'Uygulama erişimini Ağ ölçümü bölümünden kontrol et.','Çalışıyor'],error:['Bağlantı doğrulanamadı','İşlem durumunu kontrol edip tekrar deneyebilirsin.','Kontrol gerekli']}[state];
+  text('connection-title',data[0]);text('connection-description',data[1]);text('connection-badge',data[2]);$('start-btn').classList.toggle('loading',state==='loading');$('start-btn').textContent=state==='loading'?'Deneniyor...':state==='running'?'Yeniden dene':'Bağlantıyı başlat';if(message)text('status',message);refreshDisabled();
+ }
+ try{text('greeting',await window.api.getUsername());}catch{text('greeting','Yerel kullanıcı');}
+ $('close-btn').onclick=()=>window.api.closeApp();$('minimize-btn').onclick=()=>window.api.minimizeWindow();$('maximize-btn').onclick=()=>window.api.maximizeWindow();
+ const pages={'bypass-view':['Bağlantı','Bağlantın, kontrolünde.','Ağına uygun profili seç. Gerisini Ata74 denesin.'],'boost-view':['Ağ ölçümü','Önce ölç, sonra karar ver.','Hedefe göre gecikme, paket kaybı, HTTPS ve DNS yanıtları.'],'tools-view':['Araçlar','Kontrollü değişiklikler.','Seçili kart ve güç planı. Önce kaydet, uygula, doğrula.'],'pro-view':['Sistem durumu','Bilgisayarında neler oluyor?','Mevcut ayarları oku. Performans kazancı varsayma.']};
+ document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view-panel').forEach(p=>p.style.display=p.id===b.dataset.target?'block':'none');const p=pages[b.dataset.target];text('page-label',p[0]);text('page-title',p[1]);text('page-description',p[2]);document.querySelector('.content').scrollTop=0;});
+ $('network-mode').onchange=e=>text('profile-caption',e.target.value==='yurt_auto'?'5 yöntem, sırayla':'Tek profil');
+ window.api.onLauncherProgress(value=>text('status',value));window.api.onLauncherState(value=>connectionState(value.state,value.message));
+ $('start-btn').onclick=async()=>{if(operationBusy||connection==='loading')return;connectionState('loading','Profil hazırlanıyor...');try{const result=await window.api.startLauncher($('network-mode').value);if(result.cancelled){connectionState('idle','Deneme iptal edildi.');return;}if(!result.success)throw Error(result.error);connectionState('running',result.message,result.verified);}catch(e){connectionState('error',e.message);}};
+ $('stop-btn').onclick=async()=>{const b=$('stop-btn');b.disabled=true;try{const result=await window.api.stopLauncher();if(!result.success)throw Error(result.error);connectionState('idle','Bağlantı motoru durduruldu.');}catch(e){text('status',e.message);}finally{refreshDisabled();}};
+ async function run(action,payload,status,consume){
+  if(operationBusy||connection==='loading')return;operationBusy=true;refreshDisabled();if(status)text(status,'İşlem sürüyor...');
+  try{const result=await window.api.tool(action,payload);if(!result.success)throw Error(result.error||'İşlem başarısız.');if(consume)await consume(result);if(status&&!['ping-results','https-results','dns-results'].includes(status))text(status,result.message||'İşlem tamamlandı.');}
+  catch(e){if(status)text(status,e.message);}
+  finally{operationBusy=false;refreshDisabled();}
+ }
+ function button(id,action,payload,status,consume){$(id).dataset.tool=action;$(id).onclick=()=>run(action,typeof payload==='function'?payload():payload,status,consume);}
+ button('ping-test','ping',()=>({target:$('ping-target').value.trim()}),'ping-results',result=>{
+  const d=result.data;const rows=[['Bu ölçüm',d.target,fmt(d.avg),fmt(d.min),fmt(d.max),d.lossPct+'%',fmt(d.jitter),d.received+'/'+d.sent]];
+  if(lastPing&&lastPing.target===d.target)rows.push(['Önceki ölçüm',lastPing.target,fmt(lastPing.avg),fmt(lastPing.min),fmt(lastPing.max),lastPing.lossPct+'%',fmt(lastPing.jitter),lastPing.received+'/'+lastPing.sent]);
+  resultTable($('ping-results'),['Ölçüm','Hedef','Ort. RTT','En az','En çok','Yanıtsız','RTT değişimi','Yanıt'],rows);lastPing=d;text('ping-indicator',d.avg===null?'ICMP yanıtı yok':d.target+' · '+fmt(d.avg));
+ });
+ button('https-test','https',{},'https-results',result=>resultTable($('https-results'),['Adres','Durum','Toplam yanıt süresi'],result.data.map(x=>[x.url,x.ok?'HTTPS başarılı':x.error||'HTTP '+x.status,fmt(x.ms)])));
+ button('dns-test','dns-benchmark',{},'dns-results',result=>{
+  resultTable($('dns-results'),['Sağlayıcı','Birincil DNS','Başarılı sorgu','Medyan','Öneri'],result.data.rows.map(x=>[x.name,x.server,x.successes+'/'+x.total,fmt(x.median),x.id===result.data.recommended?'Bu ölçümde en düşük medyan':'']));
+  const note=document.createElement('p');note.textContent='Ayarlar değiştirilmedi. Süreler DNS sorgusuna aittir; oyun pingine değil.';$('dns-results').append(note);
+ });
+ function renderAdapter(){const a=adapters.find(x=>x.id===$('adapter-select').value);text('adapter-info',a?`${a.name} · ${a.status} · IPv4 DNS: ${(a.servers||[]).join(', ')||'Yok'} · ${a.manual?'Elle atanmış':'Otomatik'}`:'Uygun kart bulunamadı.');refreshDisabled();}
+ function renderAdapters(result){adapters=Array.isArray(result.data)?result.data:[result.data];backups=result.backups||[];const old=$('adapter-select').value;const physical=adapters.filter(x=>x.physical||backups.includes('dns:'+x.id)).sort((a,b)=>a.metric-b.metric);$('adapter-select').replaceChildren();for(const a of physical){const option=document.createElement('option');option.value=a.id;option.textContent=a.name+' · '+a.status;$('adapter-select').append(option);}if(physical.some(x=>x.id===old))$('adapter-select').value=old;renderAdapter();}
+ $('adapter-select').onchange=renderAdapter;
+ button('adapters-refresh','adapters',{},'tools-status',renderAdapters);
+ async function reloadAdapters(){const result=await window.api.tool('adapters');if(result.success)renderAdapters(result);else throw Error(result.error);}
+ button('dns-apply','dns-apply',()=>({id:$('adapter-select').value,provider:$('dns-provider').value}),'tools-status',reloadAdapters);
+ button('dns-restore','dns-restore',()=>({id:$('adapter-select').value}),'tools-status',reloadAdapters);
+ button('flush-btn','flush',{},'tools-status');
+ function renderPower(result){const d=result.data;$('power-select').replaceChildren();for(const p of d.plans){const o=document.createElement('option');o.value=p.id;o.textContent=p.name;$('power-select').append(o);}$('power-select').value=d.active;text('power-info','Etkin: '+(d.plans.find(x=>x.id===d.active)?.name||d.active)+(result.backup?' · Önceki plan kaydedilmiş.':''));$('power-restore').dataset.hasBackup=String(result.backup);}
+ button('power-refresh','power-read',{},'tools-status',renderPower);
+ async function reloadPower(){const result=await window.api.tool('power-read');if(result.success)renderPower(result);else throw Error(result.error);}
+ button('power-apply','power-apply',()=>({id:$('power-select').value}),'tools-status',reloadPower);
+ button('power-restore','power-restore',{},'tools-status',reloadPower);
+ button('inspect-btn','inspect',{},'system-status',result=>{const d=result.data,c=$('inspect-results');c.replaceChildren();const summary=document.createElement('p');summary.textContent=`Fiziksel bellek: ${d.memoryTotalMB} MB toplam / ${d.memoryFreeMB} MB kullanılabilir. Önbelleğin dolu olması tek başına sorun değildir.`;c.append(summary);for(const [heading,headers,rows] of [['Servisler',['Servis','Durum','Başlangıç'],d.services.map(s=>[s.name,s.status,s.startType])],['Ağ kartı kesme ayarı',['Kart','Okunan değer'],d.interrupt.map(x=>[x.adapter,x.value])],['Kayıtlı TCP değerleri (kaynağı bilinmiyor)',['Konum','Ayar','Değer'],d.legacy.map(x=>[x.location,x.name,x.value])]]){const h=document.createElement('h3');h.textContent=heading;c.append(h);const div=document.createElement('div');resultTable(div,headers,rows);c.append(div);}});
+ button('export-btn','export',{},'system-status');
+ // Populate read-only configuration serially, without changing system settings.
+ await run('adapters',{},'tools-status',renderAdapters);await run('power-read',{},'tools-status',renderPower);
+ // Keep action results (tables) instead of replacing them with generic success text.
 });
-
-document.addEventListener('DOMContentLoaded', async () => {
-    const status = document.getElementById('update-status');
-    const check = document.getElementById('update-check');
-    const download = document.getElementById('update-download');
-    const install = document.getElementById('update-install');
-    function render(state) {
-        status.textContent = 'v' + state.version + ' · ' + state.message;
-        check.disabled = ['checking','downloading','downloaded'].includes(state.status);
-        download.hidden = state.status !== 'available';
-        install.hidden = state.status !== 'downloaded';
-    }
-    window.api.onUpdateState(render);
-    async function action(button, fn) {
-        button.disabled = true;
-        try { const result = await fn(); if (result.message && result.success === false) status.textContent = result.message; else if (result.status) render(result); }
-        catch { status.textContent = 'Güncelleme işlemi tamamlanamadı. Tekrar deneyin.'; }
-        finally { button.disabled = false; }
-    }
-    check.addEventListener('click', () => action(check, window.api.checkUpdates));
-    download.addEventListener('click', () => action(download, window.api.downloadUpdate));
-    install.addEventListener('click', () => action(install, window.api.installUpdate));
-    try { render(await window.api.getUpdateState()); } catch { status.textContent = 'Güncelleme kontrolüne ulaşılamadı.'; }
+document.addEventListener('DOMContentLoaded',async()=>{
+ const $=id=>document.getElementById(id),status=$('update-status'),check=$('update-check'),download=$('update-download'),install=$('update-install');
+ function render(state){status.textContent='v'+state.version+' · '+state.message;check.disabled=['checking','downloading','downloaded'].includes(state.status);download.hidden=state.status!=='available';install.hidden=state.status!=='downloaded';}
+ window.api.onUpdateState(render);
+ async function action(button,fn){button.disabled=true;try{const result=await fn();if(result.success===false)status.textContent=result.message||result.error;else if(result.status)render(result);}catch{status.textContent='Güncelleme işlemi tamamlanamadı. Tekrar deneyin.';}finally{button.disabled=false;}}
+ check.onclick=()=>action(check,window.api.checkUpdates);download.onclick=()=>action(download,window.api.downloadUpdate);install.onclick=()=>action(install,window.api.installUpdate);
+ try{render(await window.api.getUpdateState());}catch{status.textContent='Güncelleme kontrolüne ulaşılamadı.';}
 });

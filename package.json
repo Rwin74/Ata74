@@ -1,14 +1,14 @@
 {
   "name": "roblox-local-launcher",
-  "version": "1.3.0",
-  "description": "Custom Local Launcher & Network Analyzer for Roblox",
+  "version": "1.4.0",
+  "description": "Windows network diagnostics and GoodbyeDPI client",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis --publish never",
     "release": "electron-builder --win nsis --publish always",
     "configure:github": "node scripts/configure-github.cjs",
-    "test": "node tests/updater.cjs"
+    "test": "node tests/updater.cjs && node tests/tools.cjs && node tests/main.cjs"
   },
   "build": {
     "appId": "com.roblox.locallauncher",
@@ -27,6 +27,13 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "system-scripts/",
+        "to": "system-scripts/",
+        "filter": [
+          "*.ps1"
+        ]
       }
     ],
     "files": [
@@ -38,7 +45,9 @@
       "styles.css",
       "package.json",
       "updater.js",
-      "update-config.json"
+      "update-config.json",
+      "system-tools.js",
+      "network-tools.js"
     ],
     "compression": "normal",
     "nsis": {

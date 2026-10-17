@@ -1,40 +1,9 @@
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('api', {
-    minimizeWindow: () => ipcRenderer.send('window-minimize'),
-    maximizeWindow: () => ipcRenderer.send('window-maximize'),
-    getUpdateState: () => ipcRenderer.invoke('updates-state'),
-    checkUpdates: () => ipcRenderer.invoke('updates-check'),
-    downloadUpdate: () => ipcRenderer.invoke('updates-download'),
-    installUpdate: () => ipcRenderer.invoke('updates-install'),
-    onUpdateState: callback => ipcRenderer.on('updates-event', (_event, state) => callback(state)),
-    stopLauncher: () => ipcRenderer.invoke('stop-launcher'),
-    onLauncherProgress: callback => ipcRenderer.on('launcher-progress', (_event, text) => callback(text)),
-    getUsername: () => ipcRenderer.invoke('get-username'),
-    getPing: () => ipcRenderer.invoke('get-ping'),
-    startLauncher: (mode) => ipcRenderer.invoke('start-launcher', mode),
-    optimizeTCP: () => ipcRenderer.invoke('optimize-tcp'),
-    revertTCP: () => ipcRenderer.invoke('revert-tcp'),
-    optimizeDNS: () => ipcRenderer.invoke('optimize-dns'),
-    revertDNS: () => ipcRenderer.invoke('revert-dns'),
-    flushNetwork: () => ipcRenderer.invoke('flush-network'),
-    optimizeFPS: () => ipcRenderer.invoke('optimize-fps'),
-    revertFPS: () => ipcRenderer.invoke('revert-fps'),
-    selectFolder: () => ipcRenderer.invoke('select-folder'),
-    compressFolder: (folderPath) => ipcRenderer.invoke('compress-folder', folderPath),
-    uncompressFolder: (folderPath) => ipcRenderer.invoke('uncompress-folder', folderPath),
-    setShutdown: (minutes) => ipcRenderer.invoke('set-shutdown', minutes),
-    cancelShutdown: () => ipcRenderer.invoke('cancel-shutdown'),
-    cleanDesktop: () => ipcRenderer.invoke('clean-desktop'),
-    enableTimerRes: () => ipcRenderer.invoke('enable-timer-res'),
-    disableTimerRes: () => ipcRenderer.invoke('disable-timer-res'),
-    enableMSI: () => ipcRenderer.invoke('enable-msi'),
-    disableMSI: () => ipcRenderer.invoke('disable-msi'),
-    disableInterrupt: () => ipcRenderer.invoke('disable-interrupt'),
-    enableInterrupt: () => ipcRenderer.invoke('enable-interrupt'),
-    flushRAM: () => ipcRenderer.invoke('flush-ram'),
-    nukeTelemetry: () => ipcRenderer.invoke('nuke-telemetry'),
-    restoreTelemetry: () => ipcRenderer.invoke('restore-telemetry'),
-    closeApp: () => ipcRenderer.send('close-app'),
-    onCompressProgress: (callback) => ipcRenderer.on('compression-progress', (event, data) => callback(data))
+'use strict';
+const {contextBridge,ipcRenderer}=require('electron');
+contextBridge.exposeInMainWorld('api',{
+ getUsername:()=>ipcRenderer.invoke('get-username'),startLauncher:mode=>ipcRenderer.invoke('start-launcher',mode),stopLauncher:()=>ipcRenderer.invoke('stop-launcher'),
+ tool:(action,payload)=>ipcRenderer.invoke('tool',action,payload),
+ onLauncherProgress:fn=>ipcRenderer.on('launcher-progress',(_e,value)=>fn(value)),onLauncherState:fn=>ipcRenderer.on('launcher-state',(_e,value)=>fn(value)),
+ minimizeWindow:()=>ipcRenderer.send('window-minimize'),maximizeWindow:()=>ipcRenderer.send('window-maximize'),closeApp:()=>ipcRenderer.send('close-app'),
+ getUpdateState:()=>ipcRenderer.invoke('updates-state'),checkUpdates:()=>ipcRenderer.invoke('updates-check'),downloadUpdate:()=>ipcRenderer.invoke('updates-download'),installUpdate:()=>ipcRenderer.invoke('updates-install'),onUpdateState:fn=>ipcRenderer.on('updates-event',(_e,value)=>fn(value))
 });
